@@ -322,7 +322,50 @@ static void cmd_channel_remove(const char *data)
 
 static int get_nick_length(void *data)
 {
-        return strlen(((NICK_REC *) data)->nick);
+        return g_utf8_strlen(((NICK_REC *) data)->nick, -1);
+}
+
+// returns new string adjusted to certain length with spaces
+static char* adjust_utf8_string(const char *s, const unsigned int adjust_length)
+{
+	/* input string width in characters */
+	unsigned int s_length;
+	/* input string width in bytes */
+	unsigned int s_size;
+
+	/* output string */
+	char *d;
+	/* output string width in bytes */
+	unsigned int d_size;
+
+
+	s_length = g_utf8_strlen(s, -1);
+	s_size   = strlen(s);
+
+	if (s_length < adjust_length)
+	{
+		/* here we have string shorter then adjusted length, let's
+		   fill string with spaces */
+
+		d_size = s_size + adjust_length - s_length + 1;
+		d = g_malloc(d_size);
+
+		memset(d, ' ', d_size - 1);
+		d[d_size - 1] = '\0';
+
+		memcpy(d, s, s_size);
+	}
+	else
+	{
+		/* and here string greater or equal then adjusted length, let's 
+		   reduce string */
+
+		d = g_malloc(s_size + 1);
+		g_utf8_strncpy(d, s, adjust_length);
+		d_size = strlen(d);
+	}
+
+	return d;
 }
 
 static void display_sorted_nicks(CHANNEL_REC *channel, GSList *nicklist)
@@ -334,7 +377,7 @@ static void display_sorted_nicks(CHANNEL_REC *channel, GSList *nicklist)
         char *format, *stripped, *prefix_format;
 	char *linebuf, nickmode[2] = { 0, 0 };
 	int *columns, cols, rows, last_col_rows, col, row, max_width;
-        int item_extra, linebuf_size, formatnum;
+        int item_extra, formatnum;
 
 	window = window_find_closest(channel->server, channel->visible_name,
 				     MSGLEVEL_CLIENTCRAP);
@@ -393,7 +436,6 @@ static void display_sorted_nicks(CHANNEL_REC *channel, GSList *nicklist)
                 last_col_rows = rows;
 
 	str = g_string_new(prefix_format);
-	linebuf_size = max_width+1; linebuf = g_malloc(linebuf_size);
 
         col = 0; row = 0;
 	for (tmp = nicklist; tmp != NULL; tmp = tmp->next) {
@@ -404,23 +446,21 @@ static void display_sorted_nicks(CHANNEL_REC *channel, GSList *nicklist)
 		else
 			nickmode[0] = ' ';
 		
-		if (linebuf_size < columns[col]-item_extra+1) {
-			linebuf_size = (columns[col]-item_extra+1)*2;
-                        linebuf = g_realloc(linebuf, linebuf_size);
-		}
-		memset(linebuf, ' ', columns[col]-item_extra);
-		linebuf[columns[col]-item_extra] = '\0';
-		memcpy(linebuf, rec->nick, strlen(rec->nick));
+		/* adjust nick to column's length with spaces */
+		linebuf = adjust_utf8_string(rec->nick, 
+			columns[col] - item_extra);
 
 		formatnum = rec->op ? TXT_NAMES_NICK_OP :
 			rec->halfop ? TXT_NAMES_NICK_HALFOP :
 			rec->voice ? TXT_NAMES_NICK_VOICE :
                         TXT_NAMES_NICK;
+
 		format = format_get_text(MODULE_NAME, NULL,
 					 channel->server,
 					 channel->visible_name,
 					 formatnum, nickmode, linebuf);
 		g_string_append(str, format);
+		g_free(linebuf);
 		g_free(format);
 
 		if (++col == cols) {
@@ -445,7 +485,6 @@ static void display_sorted_nicks(CHANNEL_REC *channel, GSList *nicklist)
 	g_string_free(str, TRUE);
 	g_free_not_null(columns);
 	g_free_not_null(prefix_format);
-	g_free(linebuf);
 }
 
 void fe_channels_nicklist(CHANNEL_REC *channel, int flags)
