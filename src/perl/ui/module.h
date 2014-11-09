@@ -1,6 +1,7 @@
 #include "../common/module.h"
 
 #include "fe-windows.h"
+#include "fe-text/gui-windows.h"
 #include "fe-exec.h"
 #include "formats.h"
 #include "printtext.h"
@@ -8,6 +9,7 @@
 #include "themes.h"
 #include "keyboard.h"
 
+typedef MAIN_WINDOW_REC *Irssi__TextUI__MainWindow;
 typedef WINDOW_REC *Irssi__UI__Window;
 typedef TEXT_DEST_REC *Irssi__UI__TextDest;
 typedef THEME_REC *Irssi__UI__Theme;

@@ -57,4 +57,9 @@ void mainwindows_redraw_dirty(void);
 
 GSList *mainwindows_get_sorted(int reverse);
 
+MAIN_WINDOW_REC *mainwindow_up(MAIN_WINDOW_REC *mainwin, int wrap);
+MAIN_WINDOW_REC *mainwindow_down(MAIN_WINDOW_REC *mainwin, int wrap);
+int window_refnum_left(int refnum, int wrap);
+int window_refnum_right(int refnum, int wrap);
+
 #endif

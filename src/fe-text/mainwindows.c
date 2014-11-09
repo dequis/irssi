@@ -817,16 +817,40 @@ static void cmd_window_show(const char *data)
 	window_set_active(window);
 }
 
+MAIN_WINDOW_REC *mainwindow_up(MAIN_WINDOW_REC *mainwin, int wrap)
+{
+	MAIN_WINDOW_REC *rec;
+
+	rec = mainwindows_find_upper(mainwin->first_line);
+	if (rec == NULL && wrap)
+		rec = mainwindows_find_upper(term_height);
+	return rec;
+}
+
 /* SYNTAX: WINDOW UP */
 static void cmd_window_up(void)
 {
 	MAIN_WINDOW_REC *rec;
 
+#if 1
+	rec = mainwindow_up(active_mainwin, TRUE);
+#else
 	rec = mainwindows_find_upper(active_mainwin->first_line);
 	if (rec == NULL)
 		rec = mainwindows_find_upper(term_height);
+#endif
 	if (rec != NULL)
 		window_set_active(rec->active);
+}
+
+MAIN_WINDOW_REC *mainwindow_down(MAIN_WINDOW_REC *mainwin, int wrap)
+{
+	MAIN_WINDOW_REC *rec;
+
+	rec = mainwindows_find_lower(mainwin->last_line);
+	if (rec == NULL && wrap)
+		rec = mainwindows_find_lower(-1);
+	return rec;
 }
 
 /* SYNTAX: WINDOW DOWN */
@@ -834,9 +858,13 @@ static void cmd_window_down(void)
 {
 	MAIN_WINDOW_REC *rec;
 
+#if 1
+	rec = mainwindow_down(active_mainwin, TRUE);
+#else
 	rec = mainwindows_find_lower(active_mainwin->last_line);
 	if (rec == NULL)
 		rec = mainwindows_find_lower(-1);
+#endif
 	if (rec != NULL)
 		window_set_active(rec->active);
 }
@@ -846,7 +874,7 @@ static void cmd_window_down(void)
 	 (WINDOW_GUI(window)->sticky && \
 	  WINDOW_MAIN(window) == (sticky_parent)))
 
-static int window_refnum_left(int refnum, int wrap)
+int window_refnum_left(int refnum, int wrap)
 {
         MAIN_WINDOW_REC *find_sticky;
 	WINDOW_REC *window;
@@ -868,7 +896,7 @@ static int window_refnum_left(int refnum, int wrap)
         return refnum;
 }
 
-static int window_refnum_right(int refnum, int wrap)
+int window_refnum_right(int refnum, int wrap)
 {
         MAIN_WINDOW_REC *find_sticky;
 	WINDOW_REC *window;

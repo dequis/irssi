@@ -243,6 +243,14 @@ CODE:
 OUTPUT:
 	RETVAL
 
+Irssi::TextUI::MainWindow
+parent_mainwindow(window)
+	Irssi::UI::Window window
+CODE:
+	RETVAL = WINDOW_MAIN(window);
+OUTPUT:
+	RETVAL
+
 void
 window_get_history_lines(window)
 	Irssi::UI::Window window

@@ -50,6 +50,9 @@ typedef struct {
 
 static GHashTable *iobject_stashes, *plain_stashes;
 static GSList *use_protocols;
+#if xyzzy
+static GHashTable *plain_cache;
+#endif
 
 /* returns the package who called us */
 const char *perl_get_package(void)
@@ -144,13 +147,27 @@ SV *irssi_bless_plain(const char *stash, void *object)
         PERL_OBJECT_FUNC fill_func;
 	HV *hv;
 
-	fill_func = g_hash_table_lookup(plain_stashes, stash);
+#if xyzzy
+	hv = g_hash_table_lookup(plain_cache, object);
+        if (hv) {
+		/* increase reference count here */
+		SvREFCNT_inc(hv);
+		return hv;
+	} else {
+#endif
+		fill_func = g_hash_table_lookup(plain_stashes, stash);
 
-	hv = newHV();
-	hv_store(hv, "_irssi", 6, create_sv_ptr(object), 0);
-	if (fill_func != NULL)
-		fill_func(hv, object);
-	return sv_bless(newRV_noinc((SV*)hv), gv_stashpv((char *)stash, 1));
+		hv = newHV();
+#if xyzzy
+		g_hash_table_insert(plain_cache, object, hv);
+#endif
+		hv_store(hv, "_irssi", 6, create_sv_ptr(object), 0);
+		if (fill_func != NULL)
+			fill_func(hv, object);
+		return sv_bless(newRV_noinc((SV*)hv), gv_stashpv((char *)stash, 1));
+#if xyzzy
+	}
+#endif
 }
 
 int irssi_is_ref_object(SV *o)
@@ -654,6 +671,22 @@ static int free_iobject_proto(void *key, void *value, void *chat_type)
 	return FALSE;
 }
 
+static void free_iobject_cache(void *key, HV *hv)
+{
+	/* decrement refcount on hv */
+	SvREFCNT_dec(hv);
+}
+
+#if xyzzy
+static void free_plain_cache(void *key, HV *hv)
+{
+	if (hv) {
+		/* decrement refcount on hv */
+		SvREFCNT_dec(hv);
+	}
+}
+#endif
+
 static void perl_unregister_protocol(CHAT_PROTOCOL_REC *rec)
 {
 	GSList *item;
@@ -688,6 +721,10 @@ void perl_common_start(void)
 					(GCompareFunc) g_direct_equal);
 	plain_stashes = g_hash_table_new((GHashFunc) g_str_hash,
 					 (GCompareFunc) g_str_equal);
+#if xyzzy
+	plain_cache = g_hash_table_new((GHashFunc) g_direct_hash,
+					 (GCompareFunc) g_direct_equal);
+#endif
         irssi_add_plains(core_plains);
 
         use_protocols = NULL;
@@ -706,6 +743,12 @@ void perl_common_stop(void)
 	g_hash_table_foreach(plain_stashes, (GHFunc) g_free, NULL);
 	g_hash_table_destroy(plain_stashes);
         plain_stashes = NULL;
+
+#if xyzzy
+        g_hash_table_foreach(plain_cache, (GHFunc) free_plain_cache, NULL);
+	g_hash_table_destroy(plain_cache);
+        plain_cache = NULL;
+#endif
 
 	g_slist_foreach(use_protocols, (GFunc) g_free, NULL);
 	g_slist_free(use_protocols);

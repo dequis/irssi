@@ -1,4 +1,5 @@
 #include "module.h"
+#include "fe-text/gui-windows.h"
 
 void perl_themes_init(void);
 void perl_themes_deinit(void);
@@ -35,6 +36,9 @@ static void perl_window_fill_hash(HV *hv, WINDOW_REC *window)
 		hv_store(hv, "active", 6, iobject_bless(window->active), 0);
 	if (window->active_server)
 		hv_store(hv, "active_server", 13, iobject_bless(window->active_server), 0);
+	/*
+	hv_store(hv, "parent", 6, plain_bless(WINDOW_MAIN(window), "Irssi::TextUI::MainWindow"), 0);
+	*/
 
 	hv_store(hv, "servertag", 9, new_pv(window->servertag), 0);
 	hv_store(hv, "level", 5, newSViv(window->level), 0);

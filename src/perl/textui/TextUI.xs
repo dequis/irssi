@@ -8,13 +8,24 @@ static int initialized = FALSE;
 static void perl_main_window_fill_hash(HV *hv, MAIN_WINDOW_REC *window)
 {
 	hv_store(hv, "active", 6, plain_bless(window->active, "Irssi::UI::Window"), 0);
+	/* TERM_WINDOW *screen_win; TODO
+	if (window->screen_win)
+		hv_store(hv, "screen_win", 10, plain_bless(window->screen_win, "Irssi::UI:TerminalWindow"), 0);
+	*/
 
+	hv_store(hv, "sticky_windows", 14, newSViv(window->sticky_windows), 0);
+	/* GSList *statusbars; via $win->statusbars() */
 	hv_store(hv, "first_line", 10, newSViv(window->first_line), 0);
 	hv_store(hv, "last_line", 9, newSViv(window->last_line), 0);
 	hv_store(hv, "width", 5, newSViv(window->width), 0);
 	hv_store(hv, "height", 6, newSViv(window->height), 0);
 
+	hv_store(hv, "statusbar_lines_top", 19, newSViv(window->statusbar_lines_top), 0);
+	hv_store(hv, "statusbar_lines_bottom", 22, newSViv(window->statusbar_lines_bottom), 0);
 	hv_store(hv, "statusbar_lines", 15, newSViv(window->statusbar_lines), 0);
+
+	hv_store(hv, "dirty", 5, newSViv(window->dirty), 0);
+	hv_store(hv, "size_dirty", 10, newSViv(window->size_dirty), 0);
 }
 
 static void perl_text_buffer_fill_hash(HV *hv, TEXT_BUFFER_REC *buffer)
@@ -65,6 +76,22 @@ static void perl_line_info_fill_hash(HV *hv, LINE_INFO_REC *info)
 	hv_store(hv, "time", 4, newSViv(info->time), 0);
 }
 
+static void perl_statusbar_fill_hash(HV *hv, STATUSBAR_REC *bar)
+{
+	/* TODO: STATUSBAR_GROUP_REC *group; */
+	/* TODO: STATUSBAR_CONFIG_REC *config; */
+	/* via $bar->parent_window()
+	if (bar->parent_window != NULL)
+		hv_store(hv, "parent_window", 13, plain_bless(bar->parent_window, "Irssi::TextUI::MainWindow"), 0);
+	*/
+	/* GSList *items; via $bar->items() */
+
+	hv_store(hv, "color", 5, new_pv(bar->color), 0);
+	hv_store(hv, "real_ypos", 8, newSViv(bar->real_ypos), 0);
+	hv_store(hv, "dirty", 5, newSViv(bar->dirty), 0);
+	hv_store(hv, "dirty_xpos", 10, newSViv(bar->dirty_xpos), 0);
+}
+
 static void perl_statusbar_item_fill_hash(HV *hv, SBAR_ITEM_REC *item)
 {
 	hv_store(hv, "min_size", 8, newSViv(item->min_size), 0);
@@ -73,6 +100,9 @@ static void perl_statusbar_item_fill_hash(HV *hv, SBAR_ITEM_REC *item)
 	hv_store(hv, "size", 4, newSViv(item->size), 0);
 	if (item->bar->parent_window != NULL)
 		hv_store(hv, "window", 6, plain_bless(item->bar->parent_window->active, "Irssi::UI::Window"), 0);
+	/*
+	hv_store(hv, "bar", 3, plain_bless(item->bar, "Irssi::TextUI::Statusbar"), 0);
+	*/
 }
 
 static PLAIN_OBJECT_INIT_REC textui_plains[] = {
@@ -82,6 +112,7 @@ static PLAIN_OBJECT_INIT_REC textui_plains[] = {
 	{ "Irssi::TextUI::Line", (PERL_OBJECT_FUNC) perl_line_fill_hash },
 	{ "Irssi::TextUI::LineCache", (PERL_OBJECT_FUNC) perl_line_cache_fill_hash },
 	{ "Irssi::TextUI::LineInfo", (PERL_OBJECT_FUNC) perl_line_info_fill_hash },
+	{ "Irssi::TextUI::Statusbar", (PERL_OBJECT_FUNC) perl_statusbar_fill_hash },
 	{ "Irssi::TextUI::StatusbarItem", (PERL_OBJECT_FUNC) perl_statusbar_item_fill_hash },
 
 	{ NULL, NULL }
@@ -200,3 +231,95 @@ term_refresh_freeze()
 
 void
 term_refresh_thaw()
+
+MODULE = Irssi::TextUI::MainWindow  PACKAGE = Irssi
+PROTOTYPES: ENABLE
+
+void
+mainwindows()
+PREINIT:
+	GSList *tmp;
+PPCODE:
+	for (tmp = mainwindows; tmp != NULL; tmp = tmp->next) {
+		XPUSHs(sv_2mortal(plain_bless(tmp->data, "Irssi::TextUI::MainWindow")));
+	}
+
+
+Irssi::TextUI::MainWindow
+active_mainwin()
+CODE:
+	RETVAL = active_mainwin;
+OUTPUT:
+	RETVAL
+
+int
+window_refnum_left(refnum, wrap)
+	int refnum
+	int wrap
+
+int
+window_refnum_right(refnum, wrap)
+	int refnum
+	int wrap
+
+#*******************************
+MODULE = Irssi::TextUI::MainWindow  PACKAGE = Irssi::TextUI::MainWindow  PREFIX=mainwindow_
+#*******************************
+
+Irssi::TextUI::MainWindow
+mainwindow_up(mainwin, wrap)
+	Irssi::TextUI::MainWindow mainwin
+	int wrap
+
+Irssi::TextUI::MainWindow
+mainwindow_down(mainwin, wrap)
+	Irssi::TextUI::MainWindow mainwin
+	int wrap
+
+void
+statusbars(mainwin)
+	Irssi::TextUI::MainWindow mainwin;
+PREINIT:
+	GSList *tmp;
+PPCODE:
+	for (tmp = mainwin->statusbars; tmp != NULL; tmp = tmp->next) {
+		XPUSHs(sv_2mortal(plain_bless(tmp->data, "Irssi::TextUI::Statusbar")));
+	}
+
+#*******************************
+MODULE = Irssi::TextUI::Statusbar  PACKAGE = Irssi::TextUI::Statusbar
+#*******************************
+
+void
+items(bar)
+	Irssi::TextUI::Statusbar bar;
+PREINIT:
+	GSList *tmp;
+PPCODE:
+	for (tmp = bar->items; tmp != NULL; tmp = tmp->next) {
+		XPUSHs(sv_2mortal(plain_bless(tmp->data, "Irssi::TextUI::StatusbarItem")));
+	}
+
+Irssi::TextUI::MainWindow
+parent_window(bar)
+	Irssi::TextUI::Statusbar bar;
+CODE:
+	RETVAL = bar->parent_window;
+OUTPUT:
+	RETVAL
+
+#*******************************
+MODULE = Irssi::TextUI::StatusbarItem  PACKAGE = Irssi::TextUI::StatusbarItem
+#*******************************
+
+Irssi::TextUI::Statusbar
+bar(item)
+	Irssi::TextUI::StatusbarItem item;
+CODE:
+	RETVAL = item->bar;
+OUTPUT:
+	RETVAL
+
+#*******************************
+MODULE = Irssi::TextUI  PACKAGE = Irssi::TextUI
+#*******************************

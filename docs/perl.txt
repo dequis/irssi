@@ -149,6 +149,12 @@ Stupid users won't probably have other window items, and smart users
 know where to run the script, or at least later figure out why it
 didn't work :)
 
+ MainWindows
+ -----------
+
+Where the user documentation speaks of "split windows", the corresponding
+perl object is called Irssi::TextUI::MainWindow. The MainWindow may contain
+several Windows but only one is active (shown) at any one time.
 
  Functions that you can use in Irssi's Perl scripts
  --------------------------------------------------
@@ -177,8 +183,10 @@ listed after the generic ones.
 
 Window active_win() - return active window
 Server active_server() - return server in active window
+MainWindow active_mainwindow() - return active mainwindow
 
 windows() - return list of all windows
+mainwindows() - return list of all split windows
 servers() - return list of all servers
 reconnects() - return list of all server reconnections
 channels() - return list of all channels
@@ -502,6 +510,52 @@ Windowitem::is_active()
 
 Window::get_active_name()
   Return active item's name, or if none is active, window's name
+
+
+TextUI::MainWindow->{}
+  active - the Irssi::UI::Window that is active inside
+  sticky_windows - number of sticky windows
+  first_line, last_line - first/last line used by this window (0..x) (includes
+			    statusbars)
+  width, height - width/height of the window (includes statusbars)
+  statusbar_lines_top
+  statusbar_lines_bottom
+  statusbar_lines - top+bottom
+  dirty - This window needs a redraw
+  size_dirty - We'll need to resize the window, but haven't got around
+               doing it just yet.
+
+
+UI::Window
+MainWindow::parent_mainwindow()
+  To get from a Window to the MainWindow that shows it, use this function.
+  It is not a field because that would create a circular data structure,
+  and the Perl interface can't handle that.
+
+(TextUI::Statusbar)
+MainWindow::statusbars()
+  A list of the TextUI::StatusBar objects in the TextUI::MainWindow
+
+
+TextUI::StatusbarItem->{}
+  min_size
+  max_size
+  xpos
+  size
+  window
+
+TextUI::Statusbar
+StatusbarItem::bar()
+  Get the statusbar to which the statusbaritem belongs.
+
+(TextUI::StatusbarItem)
+StatusbarItem::items()
+  Get the TextUI::StatusbarItems in the Statusbar.
+
+TextUI::MainWindow
+Statusbar::parent_window()
+  Get the MainWindow that shows the Statusbar.
+
 
 
  *** Server Connects

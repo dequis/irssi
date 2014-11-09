@@ -1,5 +1,6 @@
 TYPEMAP
 Irssi::UI::Theme		T_PlainObj
+Irssi::TextUI::MainWindow		T_PlainObj
 Irssi::UI::Window		T_PlainObj
 Irssi::UI::Keyinfo		T_PlainObj
 Irssi::UI::TextDest		T_PlainObj
