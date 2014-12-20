@@ -1,10 +1,5 @@
 language: perl
-perl:
-    - "5.20-shrplib"
-    - "5.18-shrplib"
-    - "system-perl"
 env:
-    - CC=clang
     - CC=gcc
 
 before_install:
