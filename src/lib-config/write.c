@@ -301,16 +301,24 @@ int config_write(CONFIG_REC *rec, const char *fname, int create_mode)
 {
 	int ret;
 	int fd;
+	int save_errno;
+	char *tmp_name;
+	const char *dest_name;
 
 	g_return_val_if_fail(rec != NULL, -1);
         g_return_val_if_fail(fname != NULL || rec->fname != NULL, -1);
         g_return_val_if_fail(create_mode != -1 || rec->create_mode != -1, -1);
 
-	fd = open(fname != NULL ? fname : rec->fname,
+	dest_name = fname != NULL ? fname : rec->fname;
+	tmp_name = g_strdup_printf("%s.XXXXXX", dest_name);
+
+	fd = g_mkstemp_full(tmp_name,
 			   O_WRONLY | O_TRUNC | O_CREAT,
 			   create_mode != -1 ? create_mode : rec->create_mode);
-	if (fd == -1)
+	if (fd == -1) {
+		g_free(tmp_name);
 		return config_error(rec, g_strerror(errno));
+	}
 
 	rec->handle = g_io_channel_unix_new(fd);
 	g_io_channel_set_encoding(rec->handle, NULL, NULL);
@@ -318,13 +326,25 @@ int config_write(CONFIG_REC *rec, const char *fname, int create_mode)
 	rec->tmp_indent_level = 0;
 	rec->tmp_last_lf = TRUE;
         ret = config_write_block(rec, rec->mainnode, FALSE, TRUE);
-	if (ret == -1) {
-		/* write error */
-		config_error(rec, errno == 0 ? "bug" : g_strerror(errno));
-	}
+	save_errno = errno;
 
 	g_io_channel_unref(rec->handle);
 	rec->handle = NULL;
+
+	if (ret == -1) {
+		/* write error */
+		g_free(tmp_name);
+		return config_error(rec, save_errno == 0 ? "bug" : g_strerror(save_errno));
+	}
+
+	/* TODO fsync here */
+
+	if (g_rename(tmp_name, dest_name) == -1) {
+		config_error(rec, g_strerror(errno));
+		g_unlink(tmp_name);
+	}
+
+	g_free(tmp_name);
 
 	return ret;
 }
